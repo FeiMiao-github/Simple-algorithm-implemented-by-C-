@@ -121,18 +121,21 @@ public:
                 s到达环入口节点时 (size - loop_size), q位于2 * (size - loop_size)
                 环上相距 (size - loop_size) % loop_size
                 所以在 s 在 (size - loop_size) % loop_size + (size - loop_size)
-                相遇
+                相遇(unloopsize % loop_size) + unloopsize
 
-                size 7, loop_size 3
-                    s = size - loop_size = 4到达入口节点
-                    此时,q = (2 * s - s) % loop_size + s = 5
+                size 7, loop_size 3, unloop_size 4
+                    s = unloopsize = 4到达入口节点
+                    q位于 (2 * s - s) % loop_size + s = 5
 
-                    s记作 unloop_size
-                    s与q相距 loop_size - unloop_size % loop_size = 2
-                    所以在 s = 6 时相遇
+                    q - s = (2 * s - s) % loop_size = unloop_size % loop_size=1
+                    所以在环上相距 loop_size - (q - s)
+                        = loop_size - unloop_size % loop_size
+                    所以再执行 unloopsize + loop_size - unloop_size % loop_size
+                        次相遇
 
-                    再次执行快指针 unloop_size 次，慢指针移动至
-                    loop_size - unloop_size % loop_size + unloop_size % loop_size
+                    再次从头执行快指针 unloop_size 次，慢指针移动至
+                        unloop_size + loop_size - unloop_size % loop_size
+                            + unloop_size % loop_size 处
 
         */
         _node * ret = nullptr;
