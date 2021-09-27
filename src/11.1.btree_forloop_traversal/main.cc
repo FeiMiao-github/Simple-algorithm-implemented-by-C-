@@ -2,22 +2,25 @@
  * for-loop 遍历二叉树 
  */
 
-/**
- *  二叉树递归遍历
- */
-
 #include <iostream>
+#include <stack>
 #include <queue>
 #include <functional>
 
 using std::queue;
+using std::stack;
 using std::function;
 using std::cout;
+
+template <typename T>
+class Traversal;
 
 template <typename T>
 class BTree
 {
 public:
+    friend class Traversal<T>;
+
     struct Node
     {
         T _val;
@@ -121,63 +124,90 @@ public:
         }
     }
 
+private:
+    Node *_root;
+};
+
+template <typename T>
+class Traversal
+{
+public:
+    typedef typename BTree<T>::Node Node;
     /**
      * root -> left -> right
      */
-    void PreOrderTraversal(const function<void(Node*)> &f)
+    static void PreOrderTraversal(BTree<T> &btree, const function<void(Node*)> &f)
     {
-        if (!_root)
+        if (!btree._root)
         {
             return;
         }
 
-        queue<Node*> q;
-        q.push(_root);
-        while (!q.empty())
+        stack<Node*> s;
+        s.push(btree._root);
+        while (!s.empty())
         {
-            Node *tmp = q.front();
-            q.pop();
+            Node* tmp = s.top();
+            s.pop();
+
             f(tmp);
+            if (tmp->_right)
+            {
+                s.push(tmp->_right);
+            }
 
             if (tmp->_left)
             {
-                q.push(tmp->_left);
-            }
-
-            if (tmp->_right)
-            {
-                q.push(tmp->_right);
+                s.push(tmp->_left);
             }
         }
     }
 
-    /**
+       /**
      * left -> root -> right
      */
-    void InOrderTraversal(const function<void(Node*)> &f)
+    static void InOrderTraversal(BTree<T> &btree, const function<void(Node*)> &f)
     {
-        if (!_root)
-        {
-            return;
-        }
+        stack<Node*> s;
+        Node *tmp = btree._root;
 
-        queue<Node*> q;
-        q.push(_root);
-        while (!q.empty())
-        {
-            Node *tmp = q.front();
-            q.pop();
+        // 实现一
+        // while (true)
+        // {
+        //     while (tmp)
+        //     {
+        //         s.push(tmp);
+        //         tmp = tmp->_left;
+        //     }
 
-            if (tmp->_left)
+        //     if (s.empty())
+        //     {
+        //         return;
+        //     }
+        //     else
+        //     {
+        //         tmp = s.top();
+        //         s.pop();
+        //         f(tmp);
+        //         tmp = tmp->_right;
+        //     }
+        // }
+
+        // 实现二
+        while (!s.empty() || tmp)
+        {
+            if (tmp)
             {
-                q.push(tmp->_left);
+                s.push(tmp);
+                tmp = tmp->_left;
             }
-
-            f(tmp);
-
-            if (tmp->_right)
+            else
             {
-                q.push(tmp->_right);
+                tmp = s.top();
+                s.pop();
+
+                f(tmp);
+                tmp = tmp->_right;
             }
         }
     }
@@ -185,41 +215,40 @@ public:
     /**
      * left -> right -> root
      */
-    void PostOrderTraversal(const function<void(Node*)> &f)
+    static void PostOrderTraversal(BTree<T> &btree, const function<void(Node*)> &f)
     {
-        if (!_root)
+        stack<Node*> s;
+        Node *lastPeek = nullptr;
+        Node *tmp = btree._root;
+        while (!s.empty() || tmp)
         {
-            return;
-        }
-
-        queue<Node*> q;
-        q.push(_root);
-        while (!q.empty())
-        {
-            Node *tmp = q.front();
-            q.pop();
-
-            if (tmp->_left)
+            while (tmp)
             {
-                q.push(tmp->_left);
+                s.push(tmp);
+                tmp = tmp->_left;
             }
 
-            if (tmp->_right)
+            tmp = s.top();
+            if (tmp->_right && tmp->_right != lastPeek)
             {
-                q.push(tmp->_right);
+                tmp = tmp->_right;
             }
-
-            f(tmp);
+            else
+            {
+                f(tmp);
+                s.pop();
+                lastPeek = tmp;
+                tmp = nullptr;
+            }
         }
     }
-
-private:
-    Node *_root;
 };
 
 class Test
 {
-    typedef BTree<int>::Node Node_t;
+    typedef BTree<int> BTree_t;
+    typedef BTree_t::Node Node_t;
+    typedef Traversal<int> Traversal_t;
 
     static void PrintNode(Node_t *node)
     {
@@ -238,9 +267,9 @@ public:
     {
         cout << "Test_PreOrderTraversal: \n";
 
-        BTree<int> btree;
+        BTree_t btree;
         btree.Append({1, 2, 3, 4, 5, 6, 7});
-        btree.PreOrderTraversal(PrintNode);
+        Traversal_t::PreOrderTraversal(btree, PrintNode);
 
         cout << "\n\n";
     }
@@ -249,9 +278,9 @@ public:
     {
         cout << "Test_InOrderTraversal: \n";
 
-        BTree<int> btree;
+        BTree_t btree;
         btree.Append({1, 2, 3, 4, 5, 6, 7});
-        btree.InOrderTraversal(PrintNode);
+        Traversal_t::InOrderTraversal(btree, PrintNode);
 
         cout << "\n\n";
     }
@@ -260,9 +289,9 @@ public:
     {
         cout << "Test_PostOrderTraversal: \n";
 
-        BTree<int> btree;
+        BTree_t btree;
         btree.Append({1, 2, 3, 4, 5, 6, 7});
-        btree.PostOrderTraversal(PrintNode);
+        Traversal_t::PostOrderTraversal(btree, PrintNode);
 
         cout << "\n\n";
     }
