@@ -6,11 +6,14 @@
 #include <iostream>
 #include <queue>
 #include <vector>
+#include <map>
+#include <stack>
 
 using std::cout;
 using std::string;
 using std::vector;
 using std::queue;
+using std::stack;
 using std::to_string;
 
 template <typename T>
@@ -69,6 +72,7 @@ class BSTChecker
 {
 public:
     virtual bool IsBST(TreeNode<T> *root) = 0;
+    virtual ~BSTChecker() = default;
 };
 
 class BSTChecker1
@@ -77,29 +81,25 @@ class BSTChecker1
 public:
     bool IsBST(TreeNode<int> *root) override
     {
-        bool ret = true;
         temp = INT32_MIN;
-        if (root != nullptr)
-        {
-            ret = IsBSTSub(root);
-        }
-        return ret;
+        return IsBSTSub(root);
     }
 
     /**
-     * 中序遍历,若为增序,则为搜索二叉树 
+     * 中序遍历,若为增序,则为搜索二叉树 (递归实现)
      */
     bool IsBSTSub(TreeNode<int> *root)
     {
         bool ret = true;
-
-        if (root->left)
+        if (root == nullptr)
         {
-            ret = IsBSTSub(root->left);
-            if (ret == false)
-            {
-                return false;
-            }
+            return ret;
+        }
+
+        ret = IsBSTSub(root->left);
+        if (ret == false)
+        {
+            return false;
         }
 
         if (root->val < temp)
@@ -111,13 +111,10 @@ public:
             temp = root->val;
         }
 
-        if (root->right)
+        ret = IsBSTSub(root->right);
+        if (ret == false)
         {
-            ret = IsBSTSub(root->right);
-            if (ret == false)
-            {
-                return false;
-            }
+            return false;
         }
 
         return true;
@@ -125,6 +122,52 @@ public:
 
 private:
     int temp;
+};
+
+class BSTChecker2
+    : public BSTChecker<int>
+{
+public:
+    bool IsBST(TreeNode<int> *root) override
+    {
+        return IsBSTSub(root);
+    }
+
+    /**
+     * 中序遍历,若为增序,则为搜索二叉树 (循环实现)
+     */
+    bool IsBSTSub(TreeNode<int> *root)
+    {
+        stack<TreeNode<int>*> s;
+        auto node = root;
+        int temp = INT32_MIN;
+
+        while (!s.empty() || node)
+        {
+            if (node)
+            {
+                s.push(node);
+                node = node->left;
+            }
+            else
+            {
+                node = s.top();
+                s.pop();
+                if (node->val < temp)
+                {
+                    return false;
+                }
+                else
+                {
+                    temp = node->val;
+                }
+
+                node = node->right;
+            }
+        }
+
+        return true;
+    }
 };
 
 template <typename T>
@@ -210,14 +253,9 @@ class Test
     typedef int Type;
     typedef BSTChecker<Type> BSTChecker_t;
     typedef BSTChecker1 BSTChecker1_t;
+    typedef BSTChecker2 BSTChecker2_t;
     typedef TreeNode<Type> TreeNode_t;
     typedef Printer<Type> Printer_t;
-
-    static void Test_IsBST(BSTChecker_t &bstchecker, TreeNode_t *tree)
-    {
-        cout << "check IsBST result: "
-             << (bstchecker.IsBST(tree) ? "true" : "false") << "\n";
-    }
 
     class TestTree
     {
@@ -227,7 +265,7 @@ class Test
         {
         }
 
-        ~TestTree()
+        virtual ~TestTree()
         {
             if (root)
             {
@@ -236,25 +274,33 @@ class Test
             }
         }
 
-        virtual TreeNode_t *Create() = 0;
+        TreeNode_t *Create()
+        {
+            if (root == nullptr)
+            {
+                root = CreateSub();
+            }
+            return root;
+        }
+
     protected:
+        virtual TreeNode_t *CreateSub() = 0;
+    
+    private:
         TreeNode_t *root;
     };
 
     class TestTree1
         : public TestTree
     {
-    public:
-        TreeNode_t *Create() override
+    protected:
+        TreeNode_t *CreateSub() override
         {
-            if (root == nullptr)
-            {
-                root = new TreeNode_t(1);
-                TreeNode_t *left = root->Left(2);
-                TreeNode_t * right = root->Right(3);
-                left = left->Right(4);
-                right = right->Left(5);
-            }
+            TreeNode_t* root = new TreeNode_t(1);
+            TreeNode_t *left = root->Left(2);
+            TreeNode_t * right = root->Right(3);
+            left = left->Right(4);
+            right = right->Left(5);
             return root;
         }
     };
@@ -268,13 +314,11 @@ class Test
         {
         }
 
-        TreeNode_t *Create() override
+    protected:
+        TreeNode_t *CreateSub() override
         {
-            if (root == nullptr)
-            {
-                root = new TreeNode_t(1);
-                CreateSub(root);
-            }
+            TreeNode_t* root = new TreeNode_t(1);
+            CreateSub(root);
             return root;
         }
 
@@ -311,42 +355,58 @@ class Test
     class TestTree3
         : public TestTree
     {
-    public:
-        TreeNode_t *Create() override
+    protected:
+        TreeNode_t *CreateSub() override
         {
-            root = new TreeNode_t(2);
-            root->Left(1);
+            TreeNode_t* root = new TreeNode_t(2);
+            root->Left(1)->Left(0);
             root->Right(3);
             return root;
         }
     };
 
+    static void Test_IsBST(BSTChecker_t &bstchecker, TreeNode_t *tree)
+    {
+        cout << "check IsBST result: "
+             << (bstchecker.IsBST(tree) ? "true" : "false") << "\n";
+    }
+
 public:
     static void Test_IsBST()
     {
-        BSTChecker1_t bstChecker1;
-        TestTree1 tree1;
-        TestTree2 tree2;
-        TestTree3 tree3;
-        TreeNode_t *tree = nullptr;
         Printer_t printer;
+        std::map<string, BSTChecker_t*> bstCheckers =
+        {
+            {"bstchecker1", new BSTChecker1_t},
+            {"bstchecker2", new BSTChecker2_t},
+        };
+        std::map<string, TestTree*> trees = {
+            {"TestTree1", new TestTree1},
+            {"TestTree2", new TestTree2},
+            {"TestTree3", new TestTree3},
+        };
 
-        tree = tree1.Create();
-        cout << "Test BSTChecker1_t:\n";
-        Test_IsBST(bstChecker1, tree);
-        printer(tree);
+        for (auto &&bstChecker : bstCheckers)
+        {
+            for (auto &&tree : trees)
+            {
+                cout << "Test " << bstChecker.first << "-" << tree.first << ":\n";
+                auto p = tree.second->Create();
+                Test_IsBST(*(bstChecker.second), p);
+                printer(p);
+                cout << "\n";
+            }
+        }
 
-        cout << "\n\nTest BSTChecker1_t: (tree2)\n";
-        tree = tree2.Create();
-        Test_IsBST(bstChecker1, tree);
-        printer(tree);
+        for (auto &&bstChecker : bstCheckers)
+        {
+            delete bstChecker.second;
+        }
 
-        cout << "\n\nTest BSTChecker1_t: (tree2)\n";
-        tree = tree3.Create();
-        Test_IsBST(bstChecker1, tree);
-        printer(tree);
-
-        // cout << "\n\nTest BSTChecker2_t:\n";
+        for (auto &&tree : trees)
+        {
+            delete tree.second;
+        }
     }
 };
 
